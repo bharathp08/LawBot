@@ -59,14 +59,19 @@ def get_legal_response(prompt):
         DISCLAIMER: This information is for educational purposes only and does not constitute legal advice. Please consult with a qualified legal professional for advice specific to your situation.
         """
         
+        # Add error checking for simple greetings
+        if prompt.lower().strip() in ['hello', 'hi', 'hey']:
+            return "Hello! I'm KnowLawBot. Please describe your legal situation or question, and I'll provide detailed information about relevant Indian laws and possible actions."
+            
         response = model.generate_content(enhanced_prompt)
-        return response.text
+        if response and response.text:
+            return response.text
+        else:
+            return "I apologize, but I couldn't generate a proper response. Please try rephrasing your question."
+            
     except Exception as e:
-        if "429" in str(e):
-            print("Rate limit exceeded, retrying after delay...")
-            time.sleep(5)  # Add a delay before retry
-            raise  # This will trigger the retry mechanism
         print(f"Error generating response: {str(e)}")
+        return "I apologize, but I'm having trouble processing your request. Please try again with a more specific legal question."
         return f"Sorry, I encountered an error while processing your request. Please try again in a few moments."
 
 @app.route('/')
