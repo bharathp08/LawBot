@@ -33,35 +33,54 @@ document.addEventListener('DOMContentLoaded', function() {
         // Show loading indicator
         loadingIndicator.classList.remove('hidden');
         
-        try {
-            const response = await fetch('/ask', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ question: question })
-            });
+        // Add retry mechanism
+        let retryCount = 0;
+        const maxRetries = 2;
     
-            const data = await response.json();
-            
-            // Hide loading indicator
-            loadingIndicator.classList.add('hidden');
-            
-            if (response.ok && data.response) {
-                // Add bot response to chat
-                addMessage(data.response, 'bot');
-            } else {
-                // Show a more user-friendly error message
-                const errorMessage = "I apologize, but I'm having trouble processing your request at the moment. " +
-                               "Please try rephrasing your question or try again in a few moments.";
+        while (retryCount <= maxRetries) {
+            try {
+                const response = await fetch('/ask', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ question: question })
+                });
+    
+                const data = await response.json();
+                
+                if (response.ok && data.response) {
+                    loadingIndicator.classList.add('hidden');
+                    addMessage(data.response, 'bot');
+                    return;
+                }
+                
+                retryCount++;
+                if (retryCount <= maxRetries) {
+                    await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
+                    continue;
+                }
+                
+                loadingIndicator.classList.add('hidden');
+                const errorMessage = "I apologize, but I'm having trouble processing your legal query. " +
+                               "Please try asking your question again with more details about the specific legal matter.";
                 addMessage(errorMessage, 'bot');
+                return;
+    
+            } catch (error) {
+                console.error('Error:', error);
+                retryCount++;
+                
+                if (retryCount > maxRetries) {
+                    loadingIndicator.classList.add('hidden');
+                    const errorMessage = "I apologize, but our legal service is temporarily unavailable. " +
+                                   "Please try again in a few moments.";
+                    addMessage(errorMessage, 'bot');
+                    return;
+                }
+                
+                await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
             }
-        } catch (error) {
-            console.error('Error:', error);
-            loadingIndicator.classList.add('hidden');
-            const errorMessage = "I apologize for the inconvenience. There seems to be a technical issue. " +
-                           "Please try again in a few moments.";
-            addMessage(errorMessage, 'bot');
         }
         
         // Scroll to bottom of chat
