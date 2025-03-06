@@ -3,9 +3,31 @@ import google.generativeai as genai
 
 app = Flask(__name__)
 
-# Configure Gemini API
+# Configure Gemini API with specific version
 api_key = 'AIzaSyB7hDhqN9PSs52d016llUP0SmN98pOhh5U'
-genai.configure(api_key=api_key, transport='rest')
+genai.configure(api_key=api_key)
+
+try:
+    # List available models
+    models = genai.list_models()
+    print("Available models:", [model.name for model in models])
+    
+    # Initialize model with full path
+    model = genai.GenerativeModel('models/gemini-pro')
+    
+    # Test connection with simple prompt
+    test_response = model.generate_content("Hello")
+    print("Model initialized successfully")
+    
+except Exception as e:
+    print(f"Model initialization error: {str(e)}")
+    try:
+        # Fallback to alternative model name
+        model = genai.GenerativeModel('gemini-1.0-pro')
+        test_response = model.generate_content("Hello")
+        print("Connected using alternative model name")
+    except Exception as e:
+        print(f"Fallback model failed: {str(e)}")
 
 # Initialize model with specific configuration
 generation_config = {
