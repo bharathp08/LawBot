@@ -5,14 +5,28 @@ app = Flask(__name__)
 
 # Configure Gemini API
 api_key = 'AIzaSyB7hDhqN9PSs52d016llUP0SmN98pOhh5U'
-genai.configure(api_key=api_key)
+genai.configure(api_key=api_key, transport='rest')
 
-# List available models and print them for debugging
-models = genai.list_models()
-print("Available models:", [model.name for model in models])
+# Initialize model with specific configuration
+generation_config = {
+    "temperature": 0.9,
+    "top_p": 1,
+    "top_k": 1,
+    "max_output_tokens": 2048,
+}
 
-# Use the correct model name
-model = genai.GenerativeModel('gemini-pro')
+safety_settings = [
+    {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_MEDIUM_AND_ABOVE"},
+    {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_MEDIUM_AND_ABOVE"},
+    {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_MEDIUM_AND_ABOVE"},
+    {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_MEDIUM_AND_ABOVE"},
+]
+
+model = genai.GenerativeModel(
+    model_name='gemini-pro',
+    generation_config=generation_config,
+    safety_settings=safety_settings
+)
 
 # Test the connection
 try:
