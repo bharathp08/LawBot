@@ -3,9 +3,9 @@ import google.generativeai as genai
 
 app = Flask(__name__)
 
-# Configure Gemini API
+# Configure Gemini API with beta version
 api_key = 'AIzaSyB7hDhqN9PSs52d016llUP0SmN98pOhh5U'
-genai.configure(api_key=api_key)
+genai.configure(api_key=api_key, api_version='v1beta')
 
 # Single model initialization with all configurations
 generation_config = {
@@ -23,11 +23,9 @@ safety_settings = [
 ]
 
 try:
-    models = genai.list_models()
-    print("Available models:", [model.name for model in models])
-    
+    # Initialize model with beta version
     model = genai.GenerativeModel(
-        model_name='models/gemini-pro',
+        model_name='gemini-pro',
         generation_config=generation_config,
         safety_settings=safety_settings
     )
