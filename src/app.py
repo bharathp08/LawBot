@@ -14,11 +14,6 @@ def get_legal_response(prompt):
         if prompt.lower().strip() in ['hello', 'hi', 'hey']:
             return "Hello! I'm KnowLawBot, your Indian legal advisor. I can help you with questions about Indian laws, regulations, and legal matters. Please describe your legal concern."
         
-        # Check for non-legal queries
-        non_legal_keywords = ['cook', 'recipe', 'food', 'restaurant', 'dish', 'biriyani']
-        if any(word in prompt.lower() for word in non_legal_keywords):
-            return "I am a legal advisor specialized in Indian law. I cannot help with cooking or non-legal questions. Please ask me about legal matters, rights, or laws in India."
-            
         # Process legal questions
         enhanced_prompt = f"""As a legal expert specializing in Indian law, provide comprehensive advice for the following situation:
         
@@ -39,10 +34,13 @@ def get_legal_response(prompt):
         DISCLAIMER: This information is for educational purposes only and should not be considered as legal advice."""
             
         response = model.generate_content(enhanced_prompt)
-        return response.text if response else "I apologize, but I couldn't process your legal query. Please try rephrasing your question."
+        if response and hasattr(response, 'text'):
+            return response.text
+        return "I apologize, but I couldn't process your legal query. Please try rephrasing your question."
             
     except Exception as e:
-        print(f"Error: {str(e)}")
+        print(f"Error in get_legal_response: {str(e)}")
+        return str(e)  # Return actual error for debugging
         return "I apologize, but I'm experiencing technical difficulties. Please try again with your legal question in a few moments."
 
 @app.route('/')
