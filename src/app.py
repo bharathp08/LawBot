@@ -6,8 +6,20 @@ app = Flask(__name__)
 # Configure Gemini API
 api_key = 'AIzaSyB7hDhqN9PSs52d016llUP0SmN98pOhh5U'
 genai.configure(api_key=api_key)
-model = genai.GenerativeModel('gemini-1.0-pro')  # Updated model name
 
+# List available models and print them for debugging
+models = genai.list_models()
+print("Available models:", [model.name for model in models])
+
+# Use the correct model name
+model = genai.GenerativeModel('gemini-pro')
+
+# Test the connection
+try:
+    test_response = model.generate_content("Test connection")
+    print("Gemini API connected successfully")
+except Exception as e:
+    print(f"Connection test failed: {str(e)}")
 def get_legal_response(prompt):
     try:
         # Handle greetings
