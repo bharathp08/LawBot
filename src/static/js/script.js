@@ -22,7 +22,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!question) {
             return;
         }
-
+    
         // Add user message to chat
         addMessage(question, 'user');
         
@@ -41,28 +41,62 @@ document.addEventListener('DOMContentLoaded', function() {
                 },
                 body: JSON.stringify({ question: question })
             });
-
+    
             const data = await response.json();
             
             // Hide loading indicator
             loadingIndicator.classList.add('hidden');
             
-            if (response.ok) {
+            if (response.ok && data.response) {
                 // Add bot response to chat
                 addMessage(data.response, 'bot');
             } else {
-                addMessage('Error: ' + (data.error || 'Failed to get response'), 'bot');
+                // Show a more user-friendly error message
+                const errorMessage = "I apologize, but I'm having trouble processing your request at the moment. " +
+                               "Please try rephrasing your question or try again in a few moments.";
+                addMessage(errorMessage, 'bot');
             }
         } catch (error) {
             console.error('Error:', error);
             loadingIndicator.classList.add('hidden');
-            addMessage('An error occurred while processing your request', 'bot');
+            const errorMessage = "I apologize for the inconvenience. There seems to be a technical issue. " +
+                           "Please try again in a few moments.";
+            addMessage(errorMessage, 'bot');
         }
         
         // Scroll to bottom of chat
         scrollToBottom();
     }
-    
+    function formatResponse(text) {
+        if (!text) return '';
+        
+        try {
+            // Replace section titles with styled headings
+            text = text.replace(/TITLE:/g, '<h4 class="response-title">');
+            text = text.replace(/INTRODUCTION:/g, '</h4><p class="response-intro">');
+            
+            // Format numbered sections
+            text = text.replace(/(\d+)\.\s+([A-Z\s]+):/g, '</p><h5>$1. $2:</h5>');
+            
+            // Format disclaimer
+            text = text.replace(/DISCLAIMER:/g, '<hr><p class="disclaimer"><strong>Disclaimer:</strong>');
+            
+            // Convert bullet points and handle line breaks
+            text = text.replace(/[-*]\s+/g, '<li>');
+            text = text.replace(/\n\n/g, '</p><p>');
+            text = text.replace(/\n/g, '<br>');
+            
+            // Ensure proper closing tags
+            if (!text.endsWith('</p>')) {
+                text = text + '</p>';
+            }
+            
+            return text;
+        } catch (error) {
+            console.error('Error formatting response:', error);
+            return text; // Return original text if formatting fails
+        }
+    }
     // Fix form submission
     if (questionForm) {
         questionForm.addEventListener('submit', function(e) {
@@ -116,30 +150,6 @@ document.addEventListener('DOMContentLoaded', function() {
         messageDiv.appendChild(contentDiv);
         
         chatMessages.appendChild(messageDiv);
-    }
-    function formatResponse(text) {
-        // Replace section titles with styled headings
-        text = text.replace(/TITLE:/g, '<h4 class="response-title">');
-        text = text.replace(/INTRODUCTION:/g, '</h4><p class="response-intro">');
-        
-        // Format numbered sections
-        text = text.replace(/1\. RELEVANT INDIAN LAWS AND SECTIONS:/g, '</p><h5>1. Relevant Indian Laws and Sections:</h5>');
-        text = text.replace(/2\. POSSIBLE LEGAL ACTIONS:/g, '<h5>2. Possible Legal Actions:</h5>');
-        text = text.replace(/3\. LEGAL REMEDIES AVAILABLE:/g, '<h5>3. Legal Remedies Available:</h5>');
-        text = text.replace(/4\. IMPORTANT CONSIDERATIONS:/g, '<h5>4. Important Considerations:</h5>');
-        
-        // Format disclaimer
-        text = text.replace(/DISCLAIMER:/g, '<hr><p class="disclaimer"><strong>Disclaimer:</strong>');
-        
-        // Convert bullet points
-        text = text.replace(/\* /g, '<li>');
-        text = text.replace(/\n\n/g, '</p><p>');
-        text = text.replace(/\n/g, '<br>');
-        
-        // Clean up any remaining formatting
-        text = text + '</p>';
-        
-        return text;
     }
     // Initial scroll to bottom
     scrollToBottom();
