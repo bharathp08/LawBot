@@ -22,30 +22,31 @@ safety_settings = [
     {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_MEDIUM_AND_ABOVE"},
 ]
 
+# Configure Gemini API
+api_key = 'AIzaSyB7hDhqN9PSs52d016llUP0SmN98pOhh5U'
+genai.configure(api_key=api_key)
+
+# Initialize model with minimal configuration
 try:
-    # Initialize model with beta version
-    model = genai.GenerativeModel(
-        model_name='gemini-pro',
-        generation_config=generation_config,
-        safety_settings=safety_settings
-    )
+    model = genai.GenerativeModel('gemini-pro')
     
-    # Test connection
-    test_response = model.generate_content("Test connection")
-    print("Model initialized successfully")
+    # Test connection with simple prompt
+    test_response = model.generate_content("Test")
+    print("Model initialized successfully:", test_response.text)
+    
 except Exception as e:
-    print(f"Model initialization error: {str(e)}")
-    # Fallback to alternative model name if primary fails
+    print(f"Initial model error: {str(e)}")
     try:
+        # Try alternative initialization
         model = genai.GenerativeModel(
             model_name='gemini-pro',
-            generation_config=generation_config,
-            safety_settings=safety_settings
+            api_version='v1beta'
         )
-        test_response = model.generate_content("Test connection")
-        print("Connected using alternative model name")
+        test_response = model.generate_content("Test")
+        print("Connected with alternative configuration")
     except Exception as e:
-        print(f"All model initialization attempts failed: {str(e)}")
+        print(f"All attempts failed: {str(e)}")
+        raise Exception("Unable to initialize Gemini model")
 
 def get_legal_response(prompt):
     try:
