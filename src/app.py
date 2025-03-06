@@ -3,24 +3,20 @@ import google.generativeai as genai
 import logging
 
 # Update Flask app configuration
-app = Flask(__name__, 
-    template_folder='c:/Users/Bharth/OneDrive/Desktop/ByteSquad/templates'
-)
-logging.basicConfig(level=logging.INFO)
+app = Flask(__name__)  # Simplified configuration for Vercel
 
-# Configure Gemini API and model
+# Configure Gemini API with safety settings
 api_key = 'AIzaSyB7hDhqN9PSs52d016llUP0SmN98pOhh5U'
 genai.configure(api_key=api_key)
-model = genai.GenerativeModel('gemini-pro')
 
-def get_model_response(prompt):
-    try:
-        # Direct response generation
-        response = model.generate_content(prompt)
-        return response.text if hasattr(response, 'text') else None
-    except Exception as e:
-        logging.error(f"Model error: {str(e)}")
-        return None
+# Initialize model with verification
+try:
+    model = genai.GenerativeModel('gemini-pro')
+    test_response = model.generate_content("Test connection")
+    logging.info("Model initialized successfully")
+except Exception as e:
+    logging.error(f"Model initialization failed: {str(e)}")
+    raise
 
 @app.route('/ask', methods=['POST'])
 def ask():
@@ -34,14 +30,16 @@ def ask():
             greeting = "Hello! I'm KnowLawBot, your Indian legal advisor. I can help you with questions about Indian laws, regulations, and legal matters. Please describe your legal concern."
             return jsonify({'response': greeting})
 
-        # Process legal questions with simple prompt
-        response_text = get_model_response(user_question)
-        
-        if response_text:
-            return jsonify({'response': response_text})
-        
-        return jsonify({'error': 'Unable to generate response'}), 503
-            
+        # Process legal questions
+        try:
+            response = model.generate_content(
+                f"As an Indian legal expert, provide information about: {user_question}. Include relevant laws and penalties."
+            )
+            return jsonify({'response': response.text})
+        except Exception as e:
+            logging.error(f"Generation error: {str(e)}")
+            return jsonify({'error': 'Unable to process request'}), 503
+
     except Exception as e:
         logging.error(f"Request error: {str(e)}")
         return jsonify({'error': 'Service temporarily unavailable'}), 503
