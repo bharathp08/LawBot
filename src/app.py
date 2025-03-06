@@ -16,19 +16,25 @@ genai.configure(api_key=api_key)
 # Initialize model with verification
 model = None
 try:
-    model = genai.GenerativeModel('gemini-pro')
-    test_response = model.generate_content("Test connection")
+    # List available models first
+    available_models = list(genai.list_models())
+    logging.info(f"Available models: {[m.name for m in available_models]}")
+    
+    # Use gemini-1.0-pro or the most suitable available model
+    model = genai.GenerativeModel('gemini-1.0-pro')
+    # Simple test to verify model works
+    test_response = model.generate_content("Test")
     logging.info("Model initialized successfully")
 except Exception as e:
     logging.error(f"Model initialization failed: {str(e)}")
-    raise
+    model = None  # Ensure model is None if initialization fails
 
 @app.route('/ask', methods=['POST'])
 def ask():
+    if not model:
+        return jsonify({'error': 'Model not initialized. Please try again later.'}), 503
+        
     try:
-        if not model:
-            return jsonify({'error': 'Model not initialized'}), 503
-
         user_question = request.json.get('question')
         if not user_question:
             return jsonify({'error': 'No question provided'}), 400
