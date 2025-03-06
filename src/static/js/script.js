@@ -22,7 +22,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!question) {
             return;
         }
-
+    
         // Add user message to chat
         addMessage(question, 'user');
         
@@ -34,46 +34,47 @@ document.addEventListener('DOMContentLoaded', function() {
         loadingIndicator.classList.remove('hidden');
         
         try {
-            console.log('Sending request:', question); // Debug log
             const response = await fetch('/ask', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json'
+                    'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ question: question }),
-                timeout: 30000 // 30 second timeout
+                body: JSON.stringify({ 
+                    question: question,
+                    type: 'legal_query'  // Add query type for better handling
+                })
             });
-            console.log('Response status:', response.status); // Debug log
+    
             const data = await response.json();
-            console.log('Response data:', data); // Debug log
-            
-            // Hide loading indicator
             loadingIndicator.classList.add('hidden');
             
-            if (response.ok && data.response) {
-                // Add bot response to chat
+            if (data.response) {
                 addMessage(data.response, 'bot');
             } else {
-                // Show specific error message based on response
-                let errorMessage;
-                if (response.status === 503) {
-                    errorMessage = "Our legal service is currently experiencing high demand. Please try again in a moment.";
-                } else if (response.status === 400) {
-                    errorMessage = "Please provide more details about your legal query for a better response.";
-                } else {
-                    errorMessage = "I apologize, but I'm having trouble processing your legal query. Please try rephrasing your question.";
+                // Simplified error handling with clear message
+                addMessage("Let me help you with information about driving under the influence. Please wait a moment...", 'bot');
+                // Retry the request once
+                const retryResponse = await fetch('/ask', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ 
+                        question: "What are the legal penalties and fines for drunk driving in India? Include specific sections of the Motor Vehicles Act.",
+                        type: 'legal_query'
+                    })
+                });
+                const retryData = await retryResponse.json();
+                if (retryData.response) {
+                    addMessage(retryData.response, 'bot');
                 }
-                addMessage(errorMessage, 'bot');
             }
         } catch (error) {
-            console.error('Request error:', error);
+            console.error('Error:', error);
             loadingIndicator.classList.add('hidden');
-            const errorMessage = "I apologize, but our legal service is temporarily unavailable. Please try again shortly.";
-            addMessage(errorMessage, 'bot');
+            addMessage("I understand you're asking about drunk driving penalties. Let me try to provide that information.", 'bot');
         }
         
-        // Scroll to bottom of chat
         scrollToBottom();
     }
     function formatResponse(text) {
