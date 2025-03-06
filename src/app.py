@@ -3,33 +3,11 @@ import google.generativeai as genai
 
 app = Flask(__name__)
 
-# Configure Gemini API with specific version
+# Configure Gemini API
 api_key = 'AIzaSyB7hDhqN9PSs52d016llUP0SmN98pOhh5U'
 genai.configure(api_key=api_key)
 
-try:
-    # List available models
-    models = genai.list_models()
-    print("Available models:", [model.name for model in models])
-    
-    # Initialize model with full path
-    model = genai.GenerativeModel('models/gemini-pro')
-    
-    # Test connection with simple prompt
-    test_response = model.generate_content("Hello")
-    print("Model initialized successfully")
-    
-except Exception as e:
-    print(f"Model initialization error: {str(e)}")
-    try:
-        # Fallback to alternative model name
-        model = genai.GenerativeModel('gemini-1.0-pro')
-        test_response = model.generate_content("Hello")
-        print("Connected using alternative model name")
-    except Exception as e:
-        print(f"Fallback model failed: {str(e)}")
-
-# Initialize model with specific configuration
+# Single model initialization with all configurations
 generation_config = {
     "temperature": 0.9,
     "top_p": 1,
@@ -44,18 +22,33 @@ safety_settings = [
     {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_MEDIUM_AND_ABOVE"},
 ]
 
-model = genai.GenerativeModel(
-    model_name='gemini-pro',
-    generation_config=generation_config,
-    safety_settings=safety_settings
-)
-
-# Test the connection
 try:
+    models = genai.list_models()
+    print("Available models:", [model.name for model in models])
+    
+    model = genai.GenerativeModel(
+        model_name='models/gemini-pro',
+        generation_config=generation_config,
+        safety_settings=safety_settings
+    )
+    
+    # Test connection
     test_response = model.generate_content("Test connection")
-    print("Gemini API connected successfully")
+    print("Model initialized successfully")
 except Exception as e:
-    print(f"Connection test failed: {str(e)}")
+    print(f"Model initialization error: {str(e)}")
+    # Fallback to alternative model name if primary fails
+    try:
+        model = genai.GenerativeModel(
+            model_name='gemini-pro',
+            generation_config=generation_config,
+            safety_settings=safety_settings
+        )
+        test_response = model.generate_content("Test connection")
+        print("Connected using alternative model name")
+    except Exception as e:
+        print(f"All model initialization attempts failed: {str(e)}")
+
 def get_legal_response(prompt):
     try:
         # Handle greetings
