@@ -34,6 +34,10 @@ except Exception as e:
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10))
 def get_legal_response(prompt):
     try:
+        # Add error checking for simple greetings first
+        if prompt.lower().strip() in ['hello', 'hi', 'hey']:
+            return "Hello! I'm KnowLawBot. Please describe your legal situation or question, and I'll provide detailed information about relevant Indian laws and possible actions."
+            
         enhanced_prompt = f"""As a legal expert specializing in Indian law, provide comprehensive advice for the following situation:
         
         {prompt}
@@ -58,10 +62,6 @@ def get_legal_response(prompt):
         
         DISCLAIMER: This information is for educational purposes only and does not constitute legal advice. Please consult with a qualified legal professional for advice specific to your situation.
         """
-        
-        # Add error checking for simple greetings
-        if prompt.lower().strip() in ['hello', 'hi', 'hey']:
-            return "Hello! I'm KnowLawBot. Please describe your legal situation or question, and I'll provide detailed information about relevant Indian laws and possible actions."
             
         response = model.generate_content(enhanced_prompt)
         if response and response.text:
