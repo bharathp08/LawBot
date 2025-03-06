@@ -16,13 +16,17 @@ logging.basicConfig(
 api_key = 'AIzaSyB7hDhqN9PSs52d016llUP0SmN98pOhh5U'
 genai.configure(api_key=api_key)
 
-# Initialize model with retry mechanism
+# Initialize model with safety settings
 def get_model_instance():
     try:
         model = genai.GenerativeModel('gemini-pro')
-        # Test the model
-        test_response = model.generate_content("Test")
-        logging.info("Model initialized successfully")
+        generation_config = {
+            "temperature": 0.9,
+            "top_p": 1,
+            "top_k": 1,
+            "max_output_tokens": 2048,
+        }
+        model.generation_config = generation_config
         return model
     except Exception as e:
         logging.error(f"Model initialization error: {str(e)}")
@@ -33,13 +37,11 @@ model = get_model_instance()
 @app.route('/ask', methods=['POST'])
 def ask():
     try:
-        # Check if model is available
         if not model:
-            logging.error("Model not initialized, attempting to reinitialize...")
             global model
             model = get_model_instance()
             if not model:
-                return jsonify({'error': 'Service is starting up. Please try again in a few moments.'}), 503
+                return jsonify({'error': 'Unable to initialize service. Please try again later.'}), 503
 
         user_question = request.json.get('question')
         if not user_question:
@@ -50,32 +52,31 @@ def ask():
             greeting = "Hello! I'm KnowLawBot, your Indian legal advisor. I can help you with questions about Indian laws, regulations, and legal matters. Please describe your legal concern."
             return jsonify({'response': greeting})
 
-        # Process legal questions with specific prompt and error handling
+        # Process legal questions with improved prompt
         try:
-            prompt = """As an Indian legal expert, provide detailed information about: {question}. 
-            Include:
-            1. Relevant sections of law
-            2. Specific penalties and fines
-            3. Recent updates if any
-            Format the response clearly with proper sections."""
+            prompt = """You are an Indian legal expert. Provide a clear and detailed response about: {question}
+            Focus on:
+            - Specific sections of Indian law that apply
+            - Current penalties and fines
+            - Recent legal updates or amendments
+            - Important considerations
+            
+            Format the response in clear sections with proper headings."""
 
             response = model.generate_content(prompt.format(question=user_question))
             
-            if not response or not hasattr(response, 'text'):
-                logging.error("Invalid response from model")
-                return jsonify({'error': 'Unable to generate response. Please try again.'}), 503
-
-            return jsonify({'response': response.text})
+            if hasattr(response, 'text'):
+                return jsonify({'response': response.text})
+            else:
+                return jsonify({'error': 'Unable to generate response'}), 503
 
         except Exception as model_error:
-            logging.error(f"Model generation error: {str(model_error)}")
-            # Attempt to reinitialize model on error
-            model = get_model_instance()
-            return jsonify({'error': 'An error occurred. Please try your question again.'}), 503
+            logging.error(f"Generation error: {str(model_error)}")
+            return jsonify({'error': 'Unable to process your question. Please try again.'}), 503
 
     except Exception as e:
-        logging.error(f"Request processing error: {str(e)}")
-        return jsonify({'error': 'Service temporarily unavailable. Please try again later.'}), 503
+        logging.error(f"Request error: {str(e)}")
+        return jsonify({'error': 'Service error. Please try again later.'}), 503
 
 @app.route('/')
 def home():
