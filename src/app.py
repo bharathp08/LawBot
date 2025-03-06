@@ -4,61 +4,59 @@ import logging
 import os
 
 app = Flask(__name__)
+logging.basicConfig(level=logging.INFO)
 
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s'
-)
+# Configure Gemini API
+api_key = 'AIzaSyB7hDhqN9PSs52d016llUP0SmN98pOhh5U'
+genai.configure(api_key=api_key)
 
-# Get API key from environment variable
-api_key = os.getenv('GEMINI_API_KEY', 'AIzaSyB7hDhqN9PSs52d016llUP0SmN98pOhh5U')
-
-def initialize_gemini():
-    try:
-        genai.configure(api_key=api_key)
-        return True
-    except Exception as e:
-        logging.error(f"Gemini configuration error: {str(e)}")
-        return False
-
-def get_response(question):
+def get_legal_response(question):
     try:
         model = genai.GenerativeModel('gemini-pro')
-        prompt = """You are an Indian legal expert. Provide a clear and detailed response about: {question}
-        Focus on:
-        - Specific sections of Indian law that apply
-        - Current penalties and fines
-        - Recent legal updates or amendments
-        - Important considerations"""
         
-        response = model.generate_content(prompt.format(question=question))
-        return response.text if hasattr(response, 'text') else None
+        # Construct a clear prompt for legal queries
+        prompt = f"""As an Indian legal expert, provide a detailed answer about: {question}
+        Include:
+        1. Applicable laws and sections
+        2. Penalties and consequences
+        3. Recent amendments if any
+        4. Important court judgments if relevant"""
+        
+        response = model.generate_content(prompt)
+        if response and hasattr(response, 'text'):
+            return response.text
+        return None
     except Exception as e:
-        logging.error(f"Response generation error: {str(e)}")
+        logging.error(f"Model error: {str(e)}")
         return None
 
 @app.route('/ask', methods=['POST'])
 def ask():
-    if not initialize_gemini():
-        return jsonify({'error': 'Service initialization failed'}), 503
-
     try:
         user_question = request.json.get('question')
         if not user_question:
             return jsonify({'error': 'No question provided'}), 400
 
+        # Handle greetings
         if user_question.lower().strip() in ['hello', 'hi', 'hey']:
             greeting = "Hello! I'm KnowLawBot, your Indian legal advisor. I can help you with questions about Indian laws, regulations, and legal matters. Please describe your legal concern."
             return jsonify({'response': greeting})
 
-        response_text = get_response(user_question)
-        if response_text:
-            return jsonify({'response': response_text})
-        return jsonify({'error': 'Unable to generate response'}), 503
+        # Get response from Gemini
+        response = get_legal_response(user_question)
+        if response:
+            return jsonify({'response': response})
+        
+        # If no response, try one more time with simplified question
+        simplified_response = get_legal_response(f"Explain Indian law regarding: {user_question}")
+        if simplified_response:
+            return jsonify({'response': simplified_response})
+            
+        return jsonify({'error': 'Unable to process request'}), 503
 
     except Exception as e:
         logging.error(f"Request error: {str(e)}")
-        return jsonify({'error': 'Service error'}), 503
+        return jsonify({'response': 'I apologize, but I encountered an error. Please try asking your question again.'}), 200
 
 @app.route('/')
 def home():
