@@ -32,7 +32,29 @@ model = None
 def initialize_model():
     global model
     try:
-        model = genai.GenerativeModel('gemini-pro')
+        # First attempt with v1beta
+        genai.configure(api_key=api_key, api_version='v1beta')
+        model = genai.GenerativeModel(
+            model_name='gemini-pro',
+            generation_config=generation_config,
+            safety_settings=safety_settings
+        )
+        # Test the connection
+        test = model.generate_content("Test")
+        print("Model initialized with v1beta")
+        return True
+    except Exception as e:
+        print(f"v1beta initialization failed: {str(e)}")
+        try:
+            # Second attempt with v1
+            genai.configure(api_key=api_key, api_version='v1')
+            model = genai.GenerativeModel('gemini-pro')
+            test = model.generate_content("Test")
+            print("Model initialized with v1")
+            return True
+        except Exception as e:
+            print(f"v1 initialization failed: {str(e)}")
+            return False
         return True
     except Exception as e:
         print(f"Model initialization error: {str(e)}")
