@@ -9,52 +9,15 @@ app = Flask(__name__)
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 
-# Configure Gemini API with safety settings
-api_key = 'AIzaSyB7hDhqN9PSs52d016llUP0SmN98pOhh5U'  # Use direct key for testing
+# Configure Gemini API
+api_key = 'AIzaSyB7hDhqN9PSs52d016llUP0SmN98pOhh5U'
 genai.configure(api_key=api_key)
 
-# Initialize model with verification
-model = None
-try:
-    # Initialize with specific model
-    model = genai.GenerativeModel('gemini-pro')
-    
-    # Set specific parameters for the model
-    safety_settings = [
-        {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_MEDIUM_AND_ABOVE"},
-        {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_MEDIUM_AND_ABOVE"},
-        {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_MEDIUM_AND_ABOVE"},
-        {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_MEDIUM_AND_ABOVE"},
-    ]
-    
-    generation_config = {
-        "temperature": 0.7,
-        "top_p": 0.8,
-        "top_k": 40,
-        "max_output_tokens": 2048,
-    }
-    
-    # Test the model with simple prompt
-    response = model.generate_content(
-        "Test connection",
-        safety_settings=safety_settings,
-        generation_config=generation_config
-    )
-    
-    if response.text:
-        logging.info("Model initialized successfully")
-    else:
-        raise Exception("Model response empty")
-
-except Exception as e:
-    logging.error(f"Model initialization failed: {str(e)}")
-    model = None
+# Initialize model
+model = genai.GenerativeModel('gemini-pro')
 
 @app.route('/ask', methods=['POST'])
 def ask():
-    if not model:
-        return jsonify({'error': 'Model not initialized. Please try again later.'}), 503
-        
     try:
         user_question = request.json.get('question')
         if not user_question:
@@ -65,10 +28,15 @@ def ask():
             greeting = "Hello! I'm KnowLawBot, your Indian legal advisor. I can help you with questions about Indian laws, regulations, and legal matters. Please describe your legal concern."
             return jsonify({'response': greeting})
 
-        # Process legal questions
-        response = model.generate_content(
-            f"As an Indian legal expert, provide information about: {user_question}. Include relevant laws and penalties."
-        )
+        # Process legal questions with specific prompt
+        prompt = """As an Indian legal expert, provide detailed information about: {question}. 
+        Include:
+        1. Relevant sections of law
+        2. Specific penalties and fines
+        3. Recent updates if any
+        Format the response clearly with proper sections."""
+
+        response = model.generate_content(prompt.format(question=user_question))
         return jsonify({'response': response.text})
 
     except Exception as e:
