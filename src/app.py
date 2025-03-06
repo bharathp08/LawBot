@@ -14,34 +14,24 @@ logging.basicConfig(
 
 # Configure Gemini API
 api_key = 'AIzaSyB7hDhqN9PSs52d016llUP0SmN98pOhh5U'
-genai.configure(api_key=api_key)
 
-# Initialize model with safety settings
+# Initialize model for each request instead of globally
 def get_model_instance():
     try:
+        genai.configure(api_key=api_key)
         model = genai.GenerativeModel('gemini-pro')
-        generation_config = {
-            "temperature": 0.9,
-            "top_p": 1,
-            "top_k": 1,
-            "max_output_tokens": 2048,
-        }
-        model.generation_config = generation_config
         return model
     except Exception as e:
         logging.error(f"Model initialization error: {str(e)}")
         return None
 
-model = get_model_instance()
-
 @app.route('/ask', methods=['POST'])
 def ask():
     try:
+        # Initialize model for each request
+        model = get_model_instance()
         if not model:
-            global model
-            model = get_model_instance()
-            if not model:
-                return jsonify({'error': 'Unable to initialize service. Please try again later.'}), 503
+            return jsonify({'error': 'Unable to initialize service. Please try again later.'}), 503
 
         user_question = request.json.get('question')
         if not user_question:
@@ -52,16 +42,14 @@ def ask():
             greeting = "Hello! I'm KnowLawBot, your Indian legal advisor. I can help you with questions about Indian laws, regulations, and legal matters. Please describe your legal concern."
             return jsonify({'response': greeting})
 
-        # Process legal questions with improved prompt
+        # Process legal questions
         try:
             prompt = """You are an Indian legal expert. Provide a clear and detailed response about: {question}
             Focus on:
             - Specific sections of Indian law that apply
             - Current penalties and fines
             - Recent legal updates or amendments
-            - Important considerations
-            
-            Format the response in clear sections with proper headings."""
+            - Important considerations"""
 
             response = model.generate_content(prompt.format(question=user_question))
             
