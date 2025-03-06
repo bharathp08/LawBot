@@ -64,13 +64,14 @@ def get_legal_response(prompt):
         """
             
         response = model.generate_content(enhanced_prompt)
-        if response and response.text:
+        if response and hasattr(response, 'text'):
             return response.text
-        else:
-            return "I apologize, but I couldn't generate a proper response. Please try rephrasing your question."
+        return "I apologize, but I couldn't generate a proper response. Please try rephrasing your question."
             
     except Exception as e:
         print(f"Error generating response: {str(e)}")
+        if "429" in str(e):
+            return "I'm currently handling too many requests. Please try again in a few moments."
         return "I apologize, but I'm having trouble processing your request. Please try again with a more specific legal question."
         return f"Sorry, I encountered an error while processing your request. Please try again in a few moments."
 
