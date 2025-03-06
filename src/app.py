@@ -81,3 +81,6 @@ def ask():
 
 if __name__ == '__main__':
     app.run(debug=True)
+
+# This line is needed for Vercel deployment
+app = app
