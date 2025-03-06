@@ -11,14 +11,13 @@ model = genai.GenerativeModel('gemini-pro')
 def get_legal_response(prompt):
     try:
         if prompt.lower().strip() in ['hello', 'hi', 'hey']:
-            return "Hello! I'm KnowLawBot. Please describe your legal situation or question, and I'll provide detailed information about relevant Indian laws and possible actions."
+            return "Hello! I'm KnowLawBot. Please describe your legal situation or question."
             
         enhanced_prompt = f"""As a legal expert specializing in Indian law, provide comprehensive advice for the following situation:
         
         {prompt}
         
         Structure your response as follows:
-        
         TITLE: [Brief title describing the legal issue]
         INTRODUCTION: [Brief overview of the situation and applicable legal framework]
         1. RELEVANT INDIAN LAWS AND SECTIONS:
@@ -26,11 +25,10 @@ def get_legal_response(prompt):
         3. LEGAL REMEDIES AVAILABLE:
         4. IMPORTANT CONSIDERATIONS:
         
-        DISCLAIMER: This information is for educational purposes only and does not constitute legal advice.
-        """
+        DISCLAIMER: This information is for educational purposes only."""
             
         response = model.generate_content(enhanced_prompt)
-        return response.text if response else "I apologize, but I couldn't generate a proper response."
+        return response.text
             
     except Exception as e:
         print(f"Error: {str(e)}")
@@ -52,5 +50,4 @@ def ask():
     except Exception as e:
         return jsonify({'error': 'An error occurred. Please try again.'}), 500
 
-# For Vercel
 app = app
