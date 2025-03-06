@@ -2,15 +2,25 @@ from flask import Flask, render_template, request, jsonify
 import google.generativeai as genai
 import logging
 
-app = Flask(__name__)
+# Update Flask app configuration
+app = Flask(__name__, 
+    template_folder='c:/Users/Bharth/OneDrive/Desktop/ByteSquad/templates'
+)
 logging.basicConfig(level=logging.INFO)
 
-# Configure Gemini API
+# Configure Gemini API and model
 api_key = 'AIzaSyB7hDhqN9PSs52d016llUP0SmN98pOhh5U'
 genai.configure(api_key=api_key)
-
-# Initialize model with safety settings
 model = genai.GenerativeModel('gemini-pro')
+
+def get_model_response(prompt):
+    try:
+        # Direct response generation
+        response = model.generate_content(prompt)
+        return response.text if hasattr(response, 'text') else None
+    except Exception as e:
+        logging.error(f"Model error: {str(e)}")
+        return None
 
 @app.route('/ask', methods=['POST'])
 def ask():
@@ -24,21 +34,18 @@ def ask():
             greeting = "Hello! I'm KnowLawBot, your Indian legal advisor. I can help you with questions about Indian laws, regulations, and legal matters. Please describe your legal concern."
             return jsonify({'response': greeting})
 
-        # Process legal questions
-        legal_prompt = f"""As an Indian legal expert, please provide information about: {user_question}
-        Include:
-        1. Relevant sections of Indian law
-        2. Applicable fines and penalties
-        3. Legal consequences
-        4. Important considerations
-        """
+        # Process legal questions with simple prompt
+        response_text = get_model_response(user_question)
         
-        response = model.generate_content(legal_prompt)
-        return jsonify({'response': response.text})
+        if response_text:
+            return jsonify({'response': response_text})
+        
+        return jsonify({'error': 'Unable to generate response'}), 503
             
     except Exception as e:
-        logging.error(f"Error: {str(e)}")
-        return jsonify({'error': 'Unable to process request'}), 500
+        logging.error(f"Request error: {str(e)}")
+        return jsonify({'error': 'Service temporarily unavailable'}), 503
+
 # Add route for root path
 @app.route('/')
 def home():
