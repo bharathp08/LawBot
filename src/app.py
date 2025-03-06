@@ -39,5 +39,23 @@ def ask():
     except Exception as e:
         logging.error(f"Error: {str(e)}")
         return jsonify({'error': 'Unable to process request'}), 500
+# Add route for root path
+@app.route('/')
+def home():
+    try:
+        return render_template('index.html')
+    except Exception as e:
+        logging.error(f"Error rendering template: {str(e)}")
+        return "Service temporarily unavailable", 503
+
+# Add error handler for 404
+@app.errorhandler(404)
+def not_found(e):
+    return jsonify({'error': 'Page not found'}), 404
+
+# Add error handler for 500
+@app.errorhandler(500)
+def server_error(e):
+    return jsonify({'error': 'Internal server error'}), 500
 if __name__ == '__main__':
     app.run(debug=False)
