@@ -6,7 +6,7 @@ app = Flask(__name__)
 # Configure Gemini API
 api_key = 'AIzaSyB7hDhqN9PSs52d016llUP0SmN98pOhh5U'
 genai.configure(api_key=api_key)
-model = genai.GenerativeModel('gemini-pro')
+model = genai.GenerativeModel('gemini-1.0-pro')  # Updated model name
 
 def get_legal_response(prompt):
     try:
