@@ -3,97 +3,35 @@ import google.generativeai as genai
 
 app = Flask(__name__)
 
-# Configure Gemini API with beta version
-api_key = 'AIzaSyB7hDhqN9PSs52d016llUP0SmN98pOhh5U'
-genai.configure(api_key=api_key, api_version='v1beta')
-
-# Single model initialization with all configurations
-generation_config = {
-    "temperature": 0.9,
-    "top_p": 1,
-    "top_k": 1,
-    "max_output_tokens": 2048,
-}
-
-safety_settings = [
-    {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_MEDIUM_AND_ABOVE"},
-    {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_MEDIUM_AND_ABOVE"},
-    {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_MEDIUM_AND_ABOVE"},
-    {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_MEDIUM_AND_ABOVE"},
-]
-
 # Configure Gemini API
 api_key = 'AIzaSyB7hDhqN9PSs52d016llUP0SmN98pOhh5U'
 genai.configure(api_key=api_key)
 
-# Global model variable
-model = None
+try:
+    # Simple model initialization
+    model = genai.GenerativeModel('gemini-pro')
+    
+    @app.route('/')
+    def home():
+        return render_template('index.html')
 
-def initialize_model():
-    global model
-    try:
-        # First attempt with v1beta
-        genai.configure(api_key=api_key, api_version='v1beta')
-        model = genai.GenerativeModel(
-            model_name='gemini-pro',
-            generation_config=generation_config,
-            safety_settings=safety_settings
-        )
-        # Test the connection
-        test = model.generate_content("Test")
-        print("Model initialized with v1beta")
-        return True
-    except Exception as e:
-        print(f"v1beta initialization failed: {str(e)}")
+    @app.route('/ask', methods=['POST'])
+    def ask():
         try:
-            # Second attempt with v1
-            genai.configure(api_key=api_key, api_version='v1')
-            model = genai.GenerativeModel('gemini-pro')
-            test = model.generate_content("Test")
-            print("Model initialized with v1")
-            return True
+            user_question = request.json.get('question')
+            if not user_question:
+                return jsonify({'error': 'No question provided'}), 400
+
+            # Generate response
+            response = model.generate_content(user_question)
+            return jsonify({'response': response.text})
+            
         except Exception as e:
-            print(f"v1 initialization failed: {str(e)}")
-            return False
-        return True
-    except Exception as e:
-        print(f"Model initialization error: {str(e)}")
-        return False
+            print(f"Error in ask endpoint: {str(e)}")
+            return jsonify({'error': 'Unable to process request'}), 500
 
-def get_legal_response(prompt):
-    global model
-    try:
-        # Handle greetings
-        if prompt.lower().strip() in ['hello', 'hi', 'hey']:
-            return "Hello! I'm KnowLawBot, your Indian legal advisor. I can help you with questions about Indian laws, regulations, and legal matters. Please describe your legal concern."
-        
-        # Process legal questions
-        enhanced_prompt = f"""As a legal expert specializing in Indian law, provide comprehensive advice for the following situation:
-        {prompt}"""
-            
-        response = model.generate_content(enhanced_prompt)
-        return response.text if hasattr(response, 'text') else "I apologize, but I couldn't process your legal query."
-            
-    except Exception as e:
-        print(f"Error in get_legal_response: {str(e)}")
-        return "I apologize, but I'm experiencing technical difficulties. Please try again later."
-
-@app.route('/ask', methods=['POST'])
-def ask():
-    try:
-        if model is None and not initialize_model():
-            return jsonify({'error': 'Service temporarily unavailable'}), 503
-            
-        user_question = request.json.get('question')
-        if not user_question:
-            return jsonify({'error': 'No question provided'}), 400
-        
-        response = get_legal_response(user_question)
-        return jsonify({'response': response})
-    except Exception as e:
-        print(f"Error: {str(e)}")
-        return jsonify({'error': 'Internal server error'}), 500
-        return jsonify({'error': 'An error occurred processing your request'}), 500
+except Exception as e:
+    print(f"Model initialization failed: {str(e)}")
 
 # For Vercel deployment
 app = app
