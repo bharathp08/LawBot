@@ -33,28 +33,34 @@ def initialize_model():
     global model
     try:
         model = genai.GenerativeModel('gemini-pro')
-        # Test the model
-        test_response = model.generate_content("Test")
         return True
     except Exception as e:
         print(f"Model initialization error: {str(e)}")
         return False
 
-# Initialize model when app starts
-if not initialize_model():
-    print("Failed to initialize model")
-
-@app.route('/')
-def home():
-    return render_template('index.html')
+def get_legal_response(prompt):
+    global model
+    try:
+        # Handle greetings
+        if prompt.lower().strip() in ['hello', 'hi', 'hey']:
+            return "Hello! I'm KnowLawBot, your Indian legal advisor. I can help you with questions about Indian laws, regulations, and legal matters. Please describe your legal concern."
+        
+        # Process legal questions
+        enhanced_prompt = f"""As a legal expert specializing in Indian law, provide comprehensive advice for the following situation:
+        {prompt}"""
+            
+        response = model.generate_content(enhanced_prompt)
+        return response.text if hasattr(response, 'text') else "I apologize, but I couldn't process your legal query."
+            
+    except Exception as e:
+        print(f"Error in get_legal_response: {str(e)}")
+        return "I apologize, but I'm experiencing technical difficulties. Please try again later."
 
 @app.route('/ask', methods=['POST'])
 def ask():
-    global model
     try:
-        # Check if model is initialized
         if model is None and not initialize_model():
-            return jsonify({'error': 'Model not available'}), 503
+            return jsonify({'error': 'Service temporarily unavailable'}), 503
             
         user_question = request.json.get('question')
         if not user_question:
@@ -63,7 +69,8 @@ def ask():
         response = get_legal_response(user_question)
         return jsonify({'response': response})
     except Exception as e:
-        print(f"Error in ask endpoint: {str(e)}")
+        print(f"Error: {str(e)}")
+        return jsonify({'error': 'Internal server error'}), 500
         return jsonify({'error': 'An error occurred processing your request'}), 500
 
 # For Vercel deployment
