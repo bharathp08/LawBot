@@ -22,7 +22,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!question) {
             return;
         }
-    
+
         // Add user message to chat
         addMessage(question, 'user');
         
@@ -33,54 +33,44 @@ document.addEventListener('DOMContentLoaded', function() {
         // Show loading indicator
         loadingIndicator.classList.remove('hidden');
         
-        // Add retry mechanism
-        let retryCount = 0;
-        const maxRetries = 2;
-    
-        while (retryCount <= maxRetries) {
-            try {
-                const response = await fetch('/ask', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ question: question })
-                });
-    
-                const data = await response.json();
-                
-                if (response.ok && data.response) {
-                    loadingIndicator.classList.add('hidden');
-                    addMessage(data.response, 'bot');
-                    return;
+        try {
+            console.log('Sending request:', question); // Debug log
+            const response = await fetch('/ask', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({ question: question }),
+                timeout: 30000 // 30 second timeout
+            });
+            console.log('Response status:', response.status); // Debug log
+            const data = await response.json();
+            console.log('Response data:', data); // Debug log
+            
+            // Hide loading indicator
+            loadingIndicator.classList.add('hidden');
+            
+            if (response.ok && data.response) {
+                // Add bot response to chat
+                addMessage(data.response, 'bot');
+            } else {
+                // Show specific error message based on response
+                let errorMessage;
+                if (response.status === 503) {
+                    errorMessage = "Our legal service is currently experiencing high demand. Please try again in a moment.";
+                } else if (response.status === 400) {
+                    errorMessage = "Please provide more details about your legal query for a better response.";
+                } else {
+                    errorMessage = "I apologize, but I'm having trouble processing your legal query. Please try rephrasing your question.";
                 }
-                
-                retryCount++;
-                if (retryCount <= maxRetries) {
-                    await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
-                    continue;
-                }
-                
-                loadingIndicator.classList.add('hidden');
-                const errorMessage = "I apologize, but I'm having trouble processing your legal query. " +
-                               "Please try asking your question again with more details about the specific legal matter.";
                 addMessage(errorMessage, 'bot');
-                return;
-    
-            } catch (error) {
-                console.error('Error:', error);
-                retryCount++;
-                
-                if (retryCount > maxRetries) {
-                    loadingIndicator.classList.add('hidden');
-                    const errorMessage = "I apologize, but our legal service is temporarily unavailable. " +
-                                   "Please try again in a few moments.";
-                    addMessage(errorMessage, 'bot');
-                    return;
-                }
-                
-                await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
             }
+        } catch (error) {
+            console.error('Request error:', error);
+            loadingIndicator.classList.add('hidden');
+            const errorMessage = "I apologize, but our legal service is temporarily unavailable. Please try again shortly.";
+            addMessage(errorMessage, 'bot');
         }
         
         // Scroll to bottom of chat
