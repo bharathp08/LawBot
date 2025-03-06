@@ -20,11 +20,22 @@ try:
     available_models = list(genai.list_models())
     logging.info(f"Available models: {[m.name for m in available_models]}")
     
-    # Use gemini-1.0-pro or the most suitable available model
-    model = genai.GenerativeModel('gemini-1.0-pro')
-    # Simple test to verify model works
-    test_response = model.generate_content("Test")
-    logging.info("Model initialized successfully")
+    # Try different model names
+    model_names = ['gemini-pro', 'models/gemini-pro', 'gemini-1.0-pro']
+    for model_name in model_names:
+        try:
+            model = genai.GenerativeModel(model_name)
+            # Simple test to verify model works
+            test_response = model.generate_content("Test")
+            logging.info(f"Model initialized successfully with {model_name}")
+            break
+        except Exception as model_error:
+            logging.warning(f"Failed to initialize with {model_name}: {str(model_error)}")
+            continue
+    
+    if not model:
+        raise Exception("No suitable model found")
+
 except Exception as e:
     logging.error(f"Model initialization failed: {str(e)}")
     model = None  # Ensure model is None if initialization fails
