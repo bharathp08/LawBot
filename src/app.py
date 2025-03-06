@@ -10,35 +10,45 @@ app = Flask(__name__)
 logging.basicConfig(level=logging.INFO)
 
 # Configure Gemini API with safety settings
-api_key = os.getenv('GEMINI_API_KEY', 'AIzaSyB7hDhqN9PSs52d016llUP0SmN98pOhh5U')
+api_key = 'AIzaSyB7hDhqN9PSs52d016llUP0SmN98pOhh5U'  # Use direct key for testing
 genai.configure(api_key=api_key)
 
 # Initialize model with verification
 model = None
 try:
-    # List available models first
-    available_models = list(genai.list_models())
-    logging.info(f"Available models: {[m.name for m in available_models]}")
+    # Initialize with specific model
+    model = genai.GenerativeModel('gemini-pro')
     
-    # Try different model names
-    model_names = ['gemini-pro', 'models/gemini-pro', 'gemini-1.0-pro']
-    for model_name in model_names:
-        try:
-            model = genai.GenerativeModel(model_name)
-            # Simple test to verify model works
-            test_response = model.generate_content("Test")
-            logging.info(f"Model initialized successfully with {model_name}")
-            break
-        except Exception as model_error:
-            logging.warning(f"Failed to initialize with {model_name}: {str(model_error)}")
-            continue
+    # Set specific parameters for the model
+    safety_settings = [
+        {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_MEDIUM_AND_ABOVE"},
+        {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_MEDIUM_AND_ABOVE"},
+        {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_MEDIUM_AND_ABOVE"},
+        {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_MEDIUM_AND_ABOVE"},
+    ]
     
-    if not model:
-        raise Exception("No suitable model found")
+    generation_config = {
+        "temperature": 0.7,
+        "top_p": 0.8,
+        "top_k": 40,
+        "max_output_tokens": 2048,
+    }
+    
+    # Test the model with simple prompt
+    response = model.generate_content(
+        "Test connection",
+        safety_settings=safety_settings,
+        generation_config=generation_config
+    )
+    
+    if response.text:
+        logging.info("Model initialized successfully")
+    else:
+        raise Exception("Model response empty")
 
 except Exception as e:
     logging.error(f"Model initialization failed: {str(e)}")
-    model = None  # Ensure model is None if initialization fails
+    model = None
 
 @app.route('/ask', methods=['POST'])
 def ask():
