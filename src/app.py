@@ -2,6 +2,8 @@ from flask import Flask, render_template, request, jsonify
 import google.generativeai as genai
 import os
 from dotenv import load_dotenv
+import time
+from tenacity import retry, stop_after_attempt, wait_exponential
 
 load_dotenv()
 
@@ -29,6 +31,7 @@ except Exception as e:
     print(f"Error configuring Gemini API: {str(e)}")
     # We'll continue and handle errors in the routes
 
+@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10))
 def get_legal_response(prompt):
     try:
         enhanced_prompt = f"""As a legal expert specializing in Indian law, provide comprehensive advice for the following situation:
@@ -59,8 +62,12 @@ def get_legal_response(prompt):
         response = model.generate_content(enhanced_prompt)
         return response.text
     except Exception as e:
+        if "429" in str(e):
+            print("Rate limit exceeded, retrying after delay...")
+            time.sleep(5)  # Add a delay before retry
+            raise  # This will trigger the retry mechanism
         print(f"Error generating response: {str(e)}")
-        return f"Sorry, I encountered an error while processing your request: {str(e)}"
+        return f"Sorry, I encountered an error while processing your request. Please try again in a few moments."
 
 @app.route('/')
 def home():
