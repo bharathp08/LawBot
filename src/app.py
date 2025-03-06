@@ -34,14 +34,15 @@ def get_legal_response(prompt):
         DISCLAIMER: This information is for educational purposes only and should not be considered as legal advice."""
             
         response = model.generate_content(enhanced_prompt)
-        if response and hasattr(response, 'text'):
+        if hasattr(response, 'text'):
             return response.text
-        return "I apologize, but I couldn't process your legal query. Please try rephrasing your question."
+        else:
+            print("Response object:", response)
+            return "I apologize, but I couldn't process your legal query. Please try rephrasing your question."
             
     except Exception as e:
         print(f"Error in get_legal_response: {str(e)}")
-        return str(e)  # Return actual error for debugging
-        return "I apologize, but I'm experiencing technical difficulties. Please try again with your legal question in a few moments."
+        return f"I apologize, but I'm experiencing technical difficulties: {str(e)}"
 
 @app.route('/')
 def home():
@@ -57,6 +58,8 @@ def ask():
         response = get_legal_response(user_question)
         return jsonify({'response': response})
     except Exception as e:
-        return jsonify({'error': 'An error occurred. Please try again.'}), 500
+        print(f"Error in ask endpoint: {str(e)}")
+        return jsonify({'error': str(e)}), 500
 
+# For Vercel deployment
 app = app
