@@ -1,65 +1,90 @@
 import gradio as gr
 import google.generativeai as genai
 import os
+import logging
 
-# Configure Gemini API with proper error handling
-api_key = os.getenv('GOOGLE_API_KEY')  # Will be set in Hugging Face Space settings
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+
+# Configure Gemini API
+api_key = os.getenv('GOOGLE_API_KEY')
 genai.configure(api_key=api_key)
+
+def initialize_model():
+    try:
+        models = list(genai.list_models())
+        preferred_model = 'gemini-1.5-flash'
+        for model_info in models:
+            if preferred_model in model_info.name:
+                return genai.GenerativeModel(model_info.name)
+        return genai.GenerativeModel('gemini-pro')
+    except Exception as e:
+        logging.error(f"Model initialization error: {str(e)}")
+        return None
 
 def get_response(message):
     try:
-        model = genai.GenerativeModel('gemini-1.5-flash')
-        
-        # Strict check for legal queries
-        legal_prompt = f"""
-        You are an Indian Legal System Validator.
+        model = initialize_model()
+        if not model:
+            return "System initialization error. Please try again later."
+
+        # Enhanced legal validation prompt
+        validation_prompt = f"""
+        Strictly validate if this query relates to Indian legal system:
         Query: '{message}'
         
-        Strictly check if this query is about:
-        - Indian Constitution
-        - Indian Laws and Acts
-        - Legal procedures in India
-        - Indian Court systems
-        - Legal rights in India
-        - Criminal or Civil procedures in India
+        Valid topics:
+        - Indian Constitution and amendments
+        - Indian Penal Code (IPC)
+        - Civil and Criminal laws of India
+        - Indian court procedures
+        - Legal rights under Indian law
+        - Supreme Court/High Court judgments
+        - Indian legal procedures and documentation
         
-        Respond ONLY with 'YES' if related to Indian legal system, or 'NO' for anything else.
+        Respond only with 'YES' or 'NO'.
+        Any non-legal or non-Indian legal topics must return 'NO'.
         """
-        check_response = model.generate_content(legal_prompt)
-        is_legal = check_response.text.strip().upper() == 'YES'
         
-        if not is_legal:
-            return "I am KnowLawBot, specialized in Indian legal matters only. Please ask questions about Indian laws, constitution, legal procedures, or your legal rights in India. For other topics, please consult appropriate resources."
-        
+        validation = model.generate_content(validation_prompt)
+        if validation.text.strip().upper() != 'YES':
+            return "I can only provide information about Indian laws, constitution, and legal procedures. Please ask a question related to Indian legal matters."
+
         # Enhanced legal response prompt
-        prompt = f"""
-        You are KnowLawBot, an expert specifically in Indian Law and Constitution.
+        legal_prompt = f"""
+        You are an Indian Legal Expert Bot. Provide information strictly based on Indian law for: {message}
         
-        Query: {message}
+        Required format:
+        1. Applicable Laws:
+           - Relevant acts and sections
+           - Constitutional provisions
         
-        Provide a detailed response STRICTLY based on Indian legal framework:
-        1. Relevant Indian Laws and Constitutional Articles
-        2. Specific Sections and Provisions
-        3. Legal Interpretation by Indian Courts
-        4. Applicable Procedures and Requirements
-        5. Recent Supreme Court or High Court Judgments
+        2. Legal Details:
+           - Specific provisions
+           - Current interpretations
+           - Relevant case laws
         
-        Important Guidelines:
-        - Only provide information from Indian legal sources
-        - Cite specific laws, sections, and articles
-        - Include recent amendments if applicable
-        - Focus on practical legal information
-        - If unsure about any aspect, mention it clearly
+        3. Procedures (if applicable):
+           - Step-by-step process
+           - Required documentation
+           - Timeframes
         
-        Format the response with clear headings and bullet points.
+        4. Recent Updates:
+           - Latest amendments
+           - Supreme Court judgments
+        
+        Strict Guidelines:
+        - Only cite Indian legal sources
+        - Include section numbers and act names
+        - Mention recent relevant judgments
+        - If information is unclear, state it
         """
-        
-        response = model.generate_content(prompt)
-        return response.text if hasattr(response, 'text') else "Sorry, I couldn't generate a response."
+
+        response = model.generate_content(legal_prompt)
+        return response.text if hasattr(response, 'text') else "Error generating response"
     except Exception as e:
-        print(f"Error: {str(e)}")
-        return "I apologize, but I'm having trouble accessing the legal database. Please try again in a moment."
-        return "I apologize, but I'm having trouble connecting to the legal database. Please try again in a moment."
+        logging.error(f"Error: {str(e)}")
+        return "I apologize, but I'm having trouble accessing the legal database. Please try again."
 
 # Custom CSS for better UI
 custom_css = """
