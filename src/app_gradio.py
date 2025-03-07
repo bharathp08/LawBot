@@ -8,16 +8,34 @@ genai.configure(api_key=api_key)
 
 def get_response(message):
     try:
-        # Initialize Gemini 1.5 Flash model
         model = genai.GenerativeModel('gemini-1.5-flash')
         
+        # Check if query is related to Indian law
+        legal_prompt = f"""
+        Determine if this query is related to Indian laws, legal matters, or constitution: '{message}'
+        Only respond with 'YES' or 'NO'.
+        """
+        check_response = model.generate_content(legal_prompt)
+        is_legal = check_response.text.strip().upper() == 'YES'
+        
+        if not is_legal:
+            return "I can only assist with questions related to Indian laws, legal procedures, and constitutional matters. Please rephrase your question to focus on Indian legal topics."
+        
+        # Generate legal response for valid queries
         prompt = f"""
-        As an Indian legal expert, provide detailed information about: {message}
-        Focus on:
-        1. Applicable laws and sections
-        2. Current penalties and fines
-        3. Legal procedures
-        4. Recent amendments if any
+        You are an Indian legal expert assistant. Provide information ONLY about Indian laws and legal system.
+        
+        Query: {message}
+        
+        Provide a structured response covering:
+        1. Relevant Indian Laws and Sections
+        2. Applicable Legal Provisions
+        3. Current Penalties/Fines (if applicable)
+        4. Legal Procedures
+        5. Recent Amendments or Supreme Court Judgments
+        
+        If any part is not applicable, skip it.
+        Base all information strictly on Indian legal framework and constitution.
         """
         
         response = model.generate_content(prompt)
