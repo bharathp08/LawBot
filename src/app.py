@@ -8,10 +8,14 @@ import time
 app = Flask(__name__)
 logging.basicConfig(level=logging.INFO)
 
-# Configure Gemini API
-api_key = os.getenv('GOOGLE_API_KEY', 'AIzaSyB7hDhqN9PSs52d016llUP0SmN98pOhh5U')
-genai.configure(api_key=api_key)
-model = genai.GenerativeModel('gemini-1.5-pro')
+def get_model():
+    try:
+        api_key = os.getenv('GOOGLE_API_KEY', 'AIzaSyB7hDhqN9PSs52d016llUP0SmN98pOhh5U')
+        genai.configure(api_key=api_key)
+        return genai.GenerativeModel('gemini-pro')
+    except Exception as e:
+        logging.error(f"Model initialization error: {str(e)}")
+        return None
 
 @app.route('/ask', methods=['POST'])
 def ask():
@@ -20,22 +24,31 @@ def ask():
         if not user_question:
             return jsonify({'response': 'Please ask a question'}), 200
 
-        # Handle greetings
         if user_question.lower().strip() in ['hello', 'hi', 'hey']:
             greeting = "Hello! I'm KnowLawBot, your Indian legal advisor. I can help you with questions about Indian laws, regulations, and legal matters. Please describe your legal concern."
             return jsonify({'response': greeting})
 
-        # Generate legal response
+        model = get_model()
+        if not model:
+            return jsonify({'response': 'Service temporarily unavailable. Please try again.'}), 200
+
         prompt = f"""
-        As an Indian legal expert, provide detailed information about: {user_question}
-        Focus on:
-        - Applicable laws and sections
-        - Current penalties and fines
-        - Legal procedures
-        - Recent updates if any
+        You are an Indian legal expert. Provide a clear and detailed answer about: {user_question}
+        Include:
+        1. Specific sections of applicable laws
+        2. Current penalties and fines
+        3. Legal procedures
+        4. Recent amendments if any
+        Format the response with proper sections and bullet points.
         """
-        
-        response = model.generate_content(prompt)
+
+        response = model.generate_content(prompt, generation_config={
+            'temperature': 0.7,
+            'top_p': 0.8,
+            'top_k': 40,
+            'max_output_tokens': 2048,
+        })
+
         if hasattr(response, 'text'):
             return jsonify({'response': response.text}), 200
         
@@ -44,7 +57,7 @@ def ask():
         }), 200
 
     except Exception as e:
-        logging.error(f"Error: {str(e)}")
+        logging.error(f"Request error: {str(e)}")
         return jsonify({
             'response': 'I am currently experiencing technical difficulties. Please try again in a moment.'
         }), 200
