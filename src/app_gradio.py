@@ -2,10 +2,28 @@ import gradio as gr
 import google.generativeai as genai
 import os
 
-# Configure Gemini API
-api_key = os.getenv('GOOGLE_API_KEY', 'AIzaSyB7hDhqN9PSs52d016llUP0SmN98pOhh5U')
-genai.configure(api_key=api_key)
-model = genai.GenerativeModel('gemini-pro')
+# Configure Gemini API with proper error handling
+genai.configure(api_key='AIzaSyB7hDhqN9PSs52d016llUP0SmN98pOhh5U')
+
+def get_response(message):
+    try:
+        # Initialize Gemini 1.5 Flash model
+        model = genai.GenerativeModel('gemini-1.5-flash')
+        
+        prompt = f"""
+        As an Indian legal expert, provide detailed information about: {message}
+        Focus on:
+        1. Applicable laws and sections
+        2. Current penalties and fines
+        3. Legal procedures
+        4. Recent amendments if any
+        """
+        
+        response = model.generate_content(prompt)
+        return response.text if hasattr(response, 'text') else "Sorry, I couldn't generate a response."
+    except Exception as e:
+        print(f"Error: {str(e)}")
+        return "I apologize, but I'm having trouble connecting to the legal database. Please try again in a moment."
 
 # Custom CSS for better UI
 custom_css = """
@@ -35,35 +53,7 @@ custom_css = """
 }
 """
 
-def get_legal_response(message, history):
-    if not message:
-        return "Please ask a question about Indian law."
-    
-    # Handle greetings
-    if message.lower().strip() in ['hello', 'hi', 'hey']:
-        return "Hello! I'm KnowLawBot, your Indian legal advisor. I can help you with questions about Indian laws, regulations, and legal matters. Please describe your legal concern."
-    
-    # Generate legal response
-    prompt = f"""
-    As an Indian legal expert, provide detailed information about: {message}
-    Focus on:
-    1. Applicable laws and sections
-    2. Current penalties and fines
-    3. Legal procedures
-    4. Recent amendments if any
-    Format your response clearly with headings and bullet points where appropriate.
-    """
-    
-    try:
-        response = model.generate_content(prompt)
-        if hasattr(response, 'text'):
-            return response.text
-        return "I apologize, but I could not generate a response. Please try rephrasing your question."
-    except Exception as e:
-        print(f"Error: {str(e)}")
-        return "I am currently experiencing technical difficulties. Please try again in a moment."
-
-# Create Gradio Interface
+# Create simple interface
 with gr.Blocks(css=custom_css) as demo:
     gr.HTML("""
     <div class="chat-header">
@@ -73,29 +63,28 @@ with gr.Blocks(css=custom_css) as demo:
     """)
     
     chatbot = gr.Chatbot(
-        label="Chat with KnowLawBot",
-        bubble_full_width=False,
-        height=500,
-        avatar_images=(None, "https://img.icons8.com/color/96/000000/scales--v1.png")
+        value=[],
+        elem_id="chatbot",
+        height=400
     )
     
     msg = gr.Textbox(
         placeholder="Ask about Indian laws, regulations, or legal procedures...",
         label="Your Question",
-        scale=9
+        elem_id="user-input"
     )
     
-    clear = gr.Button("Clear Chat", scale=1)
+    clear = gr.Button("Clear Chat")
     
-    msg.submit(
-        get_legal_response,
-        [msg, chatbot],
-        [chatbot],
-        clear_input=True
-    )
+    def user_input(user_message, history):
+        if not user_message:
+            return "", history
+        bot_response = get_response(user_message)
+        history = history + [(user_message, bot_response)]
+        return "", history
     
+    msg.submit(user_input, [msg, chatbot], [msg, chatbot])
     clear.click(lambda: None, None, chatbot, queue=False)
 
-# Launch the app
 if __name__ == "__main__":
-    demo.launch()
+    demo.launch(share=True)  # Added share=True for better accessibility
