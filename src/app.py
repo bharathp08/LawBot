@@ -10,9 +10,17 @@ logging.basicConfig(level=logging.INFO)
 
 def get_model():
     try:
-        api_key = os.getenv('GOOGLE_API_KEY', 'AIzaSyB7hDhqN9PSs52d016llUP0SmN98pOhh5U')
+        # Use a direct API key for testing
+        api_key = 'AIzaSyB7hDhqN9PSs52d016llUP0SmN98pOhh5U'
         genai.configure(api_key=api_key)
-        return genai.GenerativeModel('gemini-pro')
+        model = genai.GenerativeModel('gemini-pro')
+        
+        # Test the model immediately
+        test_response = model.generate_content("Test connection")
+        if not hasattr(test_response, 'text'):
+            raise Exception("Model connection failed")
+            
+        return model
     except Exception as e:
         logging.error(f"Model initialization error: {str(e)}")
         return None
@@ -30,38 +38,35 @@ def ask():
 
         model = get_model()
         if not model:
-            return jsonify({'response': 'Service temporarily unavailable. Please try again.'}), 200
+            return jsonify({'response': 'Unable to connect to the legal assistant. Please try again.'}), 200
 
-        prompt = f"""
-        You are an Indian legal expert. Provide a clear and detailed answer about: {user_question}
-        Include:
-        1. Specific sections of applicable laws
-        2. Current penalties and fines
-        3. Legal procedures
-        4. Recent amendments if any
-        Format the response with proper sections and bullet points.
-        """
+        # Simplified prompt for better response
+        prompt = f"""As an Indian legal expert, explain the laws and penalties for: {user_question}
+        Include specific sections, fines, and recent updates."""
 
-        response = model.generate_content(prompt, generation_config={
-            'temperature': 0.7,
-            'top_p': 0.8,
-            'top_k': 40,
-            'max_output_tokens': 2048,
-        })
-
-        if hasattr(response, 'text'):
-            return jsonify({'response': response.text}), 200
+        try:
+            response = model.generate_content(prompt)
+            if hasattr(response, 'text'):
+                return jsonify({'response': response.text}), 200
+        except Exception as e:
+            logging.error(f"Generation error: {str(e)}")
+            # Try one more time with a simpler prompt
+            try:
+                response = model.generate_content(f"What are the Indian laws regarding {user_question}?")
+                if hasattr(response, 'text'):
+                    return jsonify({'response': response.text}), 200
+            except:
+                pass
         
         return jsonify({
-            'response': 'I apologize, but I could not generate a response. Please try rephrasing your question.'
+            'response': 'I apologize, but I could not retrieve the legal information. Please try asking in a different way.'
         }), 200
 
     except Exception as e:
         logging.error(f"Request error: {str(e)}")
         return jsonify({
-            'response': 'I am currently experiencing technical difficulties. Please try again in a moment.'
+            'response': 'The service is temporarily unavailable. Please try again in a moment.'
         }), 200
-
 @app.route('/')
 def home():
     return render_template('index.html')
