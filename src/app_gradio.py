@@ -3,7 +3,8 @@ import google.generativeai as genai
 import os
 
 # Configure Gemini API with proper error handling
-genai.configure(api_key='AIzaSyB7hDhqN9PSs52d016llUP0SmN98pOhh5U')
+api_key = os.getenv('GOOGLE_API_KEY')  # Will be set in Hugging Face Space settings
+genai.configure(api_key=api_key)
 
 def get_response(message):
     try:
