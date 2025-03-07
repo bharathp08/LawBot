@@ -10,38 +10,55 @@ def get_response(message):
     try:
         model = genai.GenerativeModel('gemini-1.5-flash')
         
-        # Check if query is related to Indian law
+        # Strict check for legal queries
         legal_prompt = f"""
-        Determine if this query is related to Indian laws, legal matters, or constitution: '{message}'
-        Only respond with 'YES' or 'NO'.
+        You are an Indian Legal System Validator.
+        Query: '{message}'
+        
+        Strictly check if this query is about:
+        - Indian Constitution
+        - Indian Laws and Acts
+        - Legal procedures in India
+        - Indian Court systems
+        - Legal rights in India
+        - Criminal or Civil procedures in India
+        
+        Respond ONLY with 'YES' if related to Indian legal system, or 'NO' for anything else.
         """
         check_response = model.generate_content(legal_prompt)
         is_legal = check_response.text.strip().upper() == 'YES'
         
         if not is_legal:
-            return "I can only assist with questions related to Indian laws, legal procedures, and constitutional matters. Please rephrase your question to focus on Indian legal topics."
+            return "I am KnowLawBot, specialized in Indian legal matters only. Please ask questions about Indian laws, constitution, legal procedures, or your legal rights in India. For other topics, please consult appropriate resources."
         
-        # Generate legal response for valid queries
+        # Enhanced legal response prompt
         prompt = f"""
-        You are an Indian legal expert assistant. Provide information ONLY about Indian laws and legal system.
+        You are KnowLawBot, an expert specifically in Indian Law and Constitution.
         
         Query: {message}
         
-        Provide a structured response covering:
-        1. Relevant Indian Laws and Sections
-        2. Applicable Legal Provisions
-        3. Current Penalties/Fines (if applicable)
-        4. Legal Procedures
-        5. Recent Amendments or Supreme Court Judgments
+        Provide a detailed response STRICTLY based on Indian legal framework:
+        1. Relevant Indian Laws and Constitutional Articles
+        2. Specific Sections and Provisions
+        3. Legal Interpretation by Indian Courts
+        4. Applicable Procedures and Requirements
+        5. Recent Supreme Court or High Court Judgments
         
-        If any part is not applicable, skip it.
-        Base all information strictly on Indian legal framework and constitution.
+        Important Guidelines:
+        - Only provide information from Indian legal sources
+        - Cite specific laws, sections, and articles
+        - Include recent amendments if applicable
+        - Focus on practical legal information
+        - If unsure about any aspect, mention it clearly
+        
+        Format the response with clear headings and bullet points.
         """
         
         response = model.generate_content(prompt)
         return response.text if hasattr(response, 'text') else "Sorry, I couldn't generate a response."
     except Exception as e:
         print(f"Error: {str(e)}")
+        return "I apologize, but I'm having trouble accessing the legal database. Please try again in a moment."
         return "I apologize, but I'm having trouble connecting to the legal database. Please try again in a moment."
 
 # Custom CSS for better UI
